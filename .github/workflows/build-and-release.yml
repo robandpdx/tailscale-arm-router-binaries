@@ -27,12 +27,25 @@ jobs:
           set -euo pipefail
           archive="tailscale_${VERSION}_static_arm64.tgz"
           url="https://pkgs.tailscale.com/stable/${archive}"
+          checksum_url="${url}.sha256"
 
           curl -fsSLo "${archive}" "${url}"
-          expected_sha="$(curl -fsSL "${url}.sha256" | awk '{print $1}')"
+          if ! checksum_data="$(curl -fsSL "${checksum_url}")"; then
+            echo "Error: Failed to download checksum from ${checksum_url}" >&2
+            exit 1
+          fi
+
+          expected_sha="$(awk '{print $1}' <<< "${checksum_data}")"
           actual_sha="$(sha256sum "${archive}" | awk '{print $1}')"
-          test -n "${expected_sha}"
-          test "${expected_sha}" = "${actual_sha}"
+          if [ -z "${expected_sha}" ]; then
+            echo "Error: Empty checksum returned by ${checksum_url}" >&2
+            exit 1
+          fi
+
+          if [ "${expected_sha}" != "${actual_sha}" ]; then
+            echo "Error: Checksum mismatch for ${archive}" >&2
+            exit 1
+          fi
 
           tar -xzf "${archive}"
 

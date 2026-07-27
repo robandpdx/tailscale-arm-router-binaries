@@ -37,7 +37,11 @@ jobs:
           test -f "${extracted_dir}/tailscale" || { echo "Error: Missing ${extracted_dir}/tailscale" >&2; exit 1; }
           test -f "${extracted_dir}/tailscaled" || { echo "Error: Missing ${extracted_dir}/tailscaled" >&2; exit 1; }
 
-          upx --best "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"
+          echo "### \`upx --best\` output" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          upx --best "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled" 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
           zip -j "tailscale-arm64-upx-${VERSION}.zip" "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"
 
       - name: Create release

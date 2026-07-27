@@ -25,7 +25,7 @@ jobs:
             }
 
             const html = await response.text();
-            const versions = [...html.matchAll(/tailscale_(\d+(?:\.\d+)+)_static_arm64\.tgz/g)].map((match) => match[1]);
+            const versions = [...html.matchAll(/tailscale_(\d+(?:\.\d+)*)_static_arm64\.tgz/g)].map((match) => match[1]);
             const uniqueVersions = [...new Set(versions)];
 
             if (uniqueVersions.length === 0) {

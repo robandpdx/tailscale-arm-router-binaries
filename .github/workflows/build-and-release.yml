@@ -23,6 +23,7 @@ jobs:
       - name: Download and compress binaries
         env:
           VERSION: ${{ inputs.version }}
+        shell: bash
         run: |
           set -euo pipefail
           archive="tailscale_${VERSION}_static_arm64.tgz"

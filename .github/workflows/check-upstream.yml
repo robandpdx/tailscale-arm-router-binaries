@@ -25,7 +25,7 @@ jobs:
             }
 
             const html = await response.text();
-            const versions = [...html.matchAll(/tailscale_(\d+(?:\.\d+)*)_static_arm64\.tgz/g)].map((match) => match[1]);
+            const versions = [...html.matchAll(/tailscale_(\d+\.\d+\.\d+)_static_arm64\.tgz/g)].map((match) => match[1]);
             const uniqueVersions = [...new Set(versions)];
 
             if (uniqueVersions.length === 0) {
@@ -74,7 +74,10 @@ jobs:
         uses: actions/github-script@v8
         with:
           script: |
-            const defaultBranch = context.payload.repository?.default_branch || 'main';
+            const defaultBranch = context.payload.repository?.default_branch;
+            if (!defaultBranch) {
+              throw new Error('Unable to determine repository default branch for workflow dispatch');
+            }
             const ref = context.ref.startsWith('refs/heads/')
               ? context.ref.replace('refs/heads/', '')
               : defaultBranch;

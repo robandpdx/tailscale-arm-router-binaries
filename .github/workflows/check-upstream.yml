@@ -1,0 +1,98 @@
+name: Check upstream tailscale ARM64 version
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Check upstream version
+        id: check
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const url = 'https://pkgs.tailscale.com/stable/';
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+            }
+
+            const html = await response.text();
+            const versions = [...html.matchAll(/tailscale_(\d+\.\d+\.\d+)_arm64\.tgz/g)].map((match) => match[1]);
+            const uniqueVersions = [...new Set(versions)];
+
+            if (uniqueVersions.length === 0) {
+              throw new Error('No tailscale ARM64 versions found on upstream page');
+            }
+
+            const sortVersions = (a, b) => {
+              const aParts = a.split('.').map(Number);
+              const bParts = b.split('.').map(Number);
+
+              for (let i = 0; i < Math.max(aParts.length, bParts.length); i += 1) {
+                const aPart = aParts[i] ?? 0;
+                const bPart = bParts[i] ?? 0;
+                if (aPart !== bPart) {
+                  return aPart - bPart;
+                }
+              }
+
+              return 0;
+            };
+
+            const latestVersion = [...uniqueVersions].sort(sortVersions).at(-1);
+            core.info(`Latest upstream ARM64 version: ${latestVersion}`);
+
+            core.setOutput('version', latestVersion);
+
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: `v${latestVersion}`,
+              });
+              core.info(`Release v${latestVersion} already exists.`);
+              core.setOutput('new_release', 'false');
+            } catch (error) {
+              if (error.status === 404) {
+                core.info(`New version found: ${latestVersion}`);
+                core.setOutput('new_release', 'true');
+              } else {
+                throw error;
+              }
+            }
+
+      - name: Trigger build workflow
+        if: steps.check.outputs.new_release == 'true'
+        uses: actions/github-script@v8
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
+        with:
+          script: |
+            const defaultBranch = context.payload.repository?.default_branch;
+            if (!defaultBranch) {
+              throw new Error('Unable to determine repository default branch for workflow dispatch');
+            }
+            const ref = context.ref.startsWith('refs/heads/')
+              ? context.ref.replace('refs/heads/', '')
+              : defaultBranch;
+            const version = process.env.VERSION;
+
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build-and-release.yml',
+              ref,
+              inputs: {
+                version,
+              },
+            });
+
+            core.info(`Triggered build-and-release.yml for version ${version}`);

@@ -1,0 +1,48 @@
+name: Build and release compressed tailscale ARM64 binaries
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Tailscale version to build (for example 1.88.3)
+        required: true
+        type: string
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y upx zip
+
+      - name: Download and compress binaries
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="tailscale_${VERSION}_arm64.tgz"
+          url="https://pkgs.tailscale.com/stable/${archive}"
+
+          curl -fsSLo "${archive}" "${url}"
+
+          tar -xzf "${archive}"
+
+          extracted_dir="tailscale_${VERSION}_arm64"
+          test -f "${extracted_dir}/tailscale" || { echo "Error: Missing ${extracted_dir}/tailscale" >&2; exit 1; }
+          test -f "${extracted_dir}/tailscaled" || { echo "Error: Missing ${extracted_dir}/tailscaled" >&2; exit 1; }
+
+          upx --best "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"
+          zip -j "tailscale-arm64-upx-${VERSION}.zip" "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: Tailscale ARM64 UPX v${{ inputs.version }}
+          files: tailscale-arm64-upx-${{ inputs.version }}.zip

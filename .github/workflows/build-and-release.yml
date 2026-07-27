@@ -25,7 +25,7 @@ jobs:
           VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          archive="tailscale_${VERSION}_arm64.tgz"
+          archive="tailscale_${VERSION}_static_arm64.tgz"
           url="https://pkgs.tailscale.com/stable/${archive}"
 
           curl -fsSLo "${archive}" "${url}"
@@ -36,7 +36,7 @@ jobs:
 
           tar -xzf "${archive}"
 
-          extracted_dir="tailscale_${VERSION}_arm64"
+          extracted_dir="tailscale_${VERSION}_static_arm64"
           test -f "${extracted_dir}/tailscale"
           test -f "${extracted_dir}/tailscaled"
 

@@ -50,8 +50,8 @@ jobs:
           tar -xzf "${archive}"
 
           extracted_dir="tailscale_${VERSION}_static_arm64"
-          test -f "${extracted_dir}/tailscale"
-          test -f "${extracted_dir}/tailscaled"
+          test -f "${extracted_dir}/tailscale" || { echo "Error: Missing ${extracted_dir}/tailscale" >&2; exit 1; }
+          test -f "${extracted_dir}/tailscaled" || { echo "Error: Missing ${extracted_dir}/tailscaled" >&2; exit 1; }
 
           upx --best "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"
           zip -j "tailscale-arm64-upx-${VERSION}.zip" "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"

@@ -1,4 +1,4 @@
-name: Check upstream tailscale static ARM64 version
+name: Check upstream tailscale ARM64 version
 
 on:
   schedule:
@@ -13,7 +13,7 @@ jobs:
       actions: write
 
     steps:
-      - name: Check upstream static version
+      - name: Check upstream version
         id: check
         uses: actions/github-script@v8
         with:
@@ -25,11 +25,11 @@ jobs:
             }
 
             const html = await response.text();
-            const versions = [...html.matchAll(/tailscale_(\d+\.\d+\.\d+)_static_arm64\.tgz/g)].map((match) => match[1]);
+            const versions = [...html.matchAll(/tailscale_(\d+\.\d+\.\d+)_arm64\.tgz/g)].map((match) => match[1]);
             const uniqueVersions = [...new Set(versions)];
 
             if (uniqueVersions.length === 0) {
-              throw new Error('No tailscale ARM64 static versions found on upstream page');
+              throw new Error('No tailscale ARM64 versions found on upstream page');
             }
 
             const sortVersions = (a, b) => {
@@ -48,7 +48,7 @@ jobs:
             };
 
             const latestVersion = [...uniqueVersions].sort(sortVersions).at(-1);
-            core.info(`Latest upstream ARM64 static version: ${latestVersion}`);
+            core.info(`Latest upstream ARM64 version: ${latestVersion}`);
 
             core.setOutput('version', latestVersion);
 

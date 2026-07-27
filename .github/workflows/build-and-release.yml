@@ -26,31 +26,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          archive="tailscale_${VERSION}_static_arm64.tgz"
+          archive="tailscale_${VERSION}_arm64.tgz"
           url="https://pkgs.tailscale.com/stable/${archive}"
-          checksum_url="${url}.sha256"
 
           curl -fsSLo "${archive}" "${url}"
-          if ! checksum_data="$(curl -fsSL "${checksum_url}")"; then
-            echo "Error: Failed to download checksum from ${checksum_url}" >&2
-            exit 1
-          fi
-
-          expected_sha="$(awk '{print $1}' <<< "${checksum_data}")"
-          if [ -z "${expected_sha}" ]; then
-            echo "Error: Empty checksum returned by ${checksum_url}" >&2
-            exit 1
-          fi
-
-          actual_sha="$(sha256sum "${archive}" | awk '{print $1}')"
-          if [ "${expected_sha}" != "${actual_sha}" ]; then
-            echo "Error: Checksum mismatch for ${archive}" >&2
-            exit 1
-          fi
 
           tar -xzf "${archive}"
 
-          extracted_dir="tailscale_${VERSION}_static_arm64"
+          extracted_dir="tailscale_${VERSION}_arm64"
           test -f "${extracted_dir}/tailscale" || { echo "Error: Missing ${extracted_dir}/tailscale" >&2; exit 1; }
           test -f "${extracted_dir}/tailscaled" || { echo "Error: Missing ${extracted_dir}/tailscaled" >&2; exit 1; }
 

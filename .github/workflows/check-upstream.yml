@@ -72,6 +72,8 @@ jobs:
       - name: Trigger build workflow
         if: steps.check.outputs.new_release == 'true'
         uses: actions/github-script@v8
+        env:
+          VERSION: ${{ steps.check.outputs.version }}
         with:
           script: |
             const defaultBranch = context.payload.repository?.default_branch;
@@ -81,6 +83,7 @@ jobs:
             const ref = context.ref.startsWith('refs/heads/')
               ? context.ref.replace('refs/heads/', '')
               : defaultBranch;
+            const version = process.env.VERSION;
 
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
@@ -88,8 +91,8 @@ jobs:
               workflow_id: 'build-and-release.yml',
               ref,
               inputs: {
-                version: '${{ steps.check.outputs.version }}',
+                version,
               },
             });
 
-            core.info(`Triggered build-and-release.yml for version ${{ steps.check.outputs.version }}`);
+            core.info(`Triggered build-and-release.yml for version ${version}`);

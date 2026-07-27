@@ -25,7 +25,7 @@ jobs:
             }
 
             const html = await response.text();
-            const versions = [...html.matchAll(/tailscale_([0-9]+(?:\.[0-9]+)+(?:-[0-9A-Za-z.-]+)?)_static_arm64\.tgz/g)].map((match) => match[1]);
+            const versions = [...html.matchAll(/tailscale_([0-9]+(?:\.[0-9]+)+)_static_arm64\.tgz/g)].map((match) => match[1]);
             const uniqueVersions = [...new Set(versions)];
 
             if (uniqueVersions.length === 0) {
@@ -33,10 +33,8 @@ jobs:
             }
 
             const sortVersions = (a, b) => {
-              const [aCore, aPre = ''] = a.split('-', 2);
-              const [bCore, bPre = ''] = b.split('-', 2);
-              const aParts = aCore.split('.').map(Number);
-              const bParts = bCore.split('.').map(Number);
+              const aParts = a.split('.').map(Number);
+              const bParts = b.split('.').map(Number);
 
               for (let i = 0; i < Math.max(aParts.length, bParts.length); i += 1) {
                 const aPart = aParts[i] ?? 0;
@@ -46,22 +44,13 @@ jobs:
                 }
               }
 
-              if (!aPre && bPre) {
-                return 1;
-              }
-              if (aPre && !bPre) {
-                return -1;
-              }
-              if (aPre !== bPre) {
-                return aPre.localeCompare(bPre);
-              }
-
               return 0;
             };
 
+            const defaultBranch = context.payload.repository?.default_branch || 'main';
             const ref = context.ref.startsWith('refs/heads/')
               ? context.ref.replace('refs/heads/', '')
-              : 'main';
+              : defaultBranch;
 
             const latestVersion = [...uniqueVersions].sort(sortVersions).at(-1);
             core.info(`Latest upstream ARM64 static version: ${latestVersion}`);

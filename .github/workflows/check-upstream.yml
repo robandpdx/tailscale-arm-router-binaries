@@ -25,7 +25,7 @@ jobs:
             }
 
             const html = await response.text();
-            const versions = [...html.matchAll(/tailscale_([0-9]+(?:\.[0-9]+)+)_static_arm64\.tgz/g)].map((match) => match[1]);
+            const versions = [...html.matchAll(/tailscale_(\d+\.\d+\.\d+)_static_arm64\.tgz/g)].map((match) => match[1]);
             const uniqueVersions = [...new Set(versions)];
 
             if (uniqueVersions.length === 0) {
@@ -46,11 +46,6 @@ jobs:
 
               return 0;
             };
-
-            const defaultBranch = context.payload.repository?.default_branch || 'main';
-            const ref = context.ref.startsWith('refs/heads/')
-              ? context.ref.replace('refs/heads/', '')
-              : defaultBranch;
 
             const latestVersion = [...uniqueVersions].sort(sortVersions).at(-1);
             core.info(`Latest upstream ARM64 static version: ${latestVersion}`);
@@ -74,18 +69,21 @@ jobs:
               }
             }
 
-            core.setOutput('dispatch_ref', ref);
-
       - name: Trigger build workflow
         if: steps.check.outputs.new_release == 'true'
         uses: actions/github-script@v8
         with:
           script: |
+            const defaultBranch = context.payload.repository?.default_branch || 'main';
+            const ref = context.ref.startsWith('refs/heads/')
+              ? context.ref.replace('refs/heads/', '')
+              : defaultBranch;
+
             await github.rest.actions.createWorkflowDispatch({
               owner: context.repo.owner,
               repo: context.repo.repo,
               workflow_id: 'build-and-release.yml',
-              ref: '${{ steps.check.outputs.dispatch_ref }}',
+              ref,
               inputs: {
                 version: '${{ steps.check.outputs.version }}',
               },

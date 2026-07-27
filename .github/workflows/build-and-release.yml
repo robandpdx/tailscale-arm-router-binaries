@@ -36,12 +36,12 @@ jobs:
           fi
 
           expected_sha="$(awk '{print $1}' <<< "${checksum_data}")"
-          actual_sha="$(sha256sum "${archive}" | awk '{print $1}')"
           if [ -z "${expected_sha}" ]; then
             echo "Error: Empty checksum returned by ${checksum_url}" >&2
             exit 1
           fi
 
+          actual_sha="$(sha256sum "${archive}" | awk '{print $1}')"
           if [ "${expected_sha}" != "${actual_sha}" ]; then
             echo "Error: Checksum mismatch for ${archive}" >&2
             exit 1

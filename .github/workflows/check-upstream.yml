@@ -25,7 +25,7 @@ jobs:
             }
 
             const html = await response.text();
-            const versions = [...html.matchAll(/tailscale_([0-9]+(?:\.[0-9]+){1,}(?:-[0-9A-Za-z.-]+)?)_static_arm64\.tgz/g)].map((match) => match[1]);
+            const versions = [...html.matchAll(/tailscale_([0-9]+(?:\.[0-9]+)+(?:-[0-9A-Za-z.-]+)?)_static_arm64\.tgz/g)].map((match) => match[1]);
             const uniqueVersions = [...new Set(versions)];
 
             if (uniqueVersions.length === 0) {
@@ -63,7 +63,7 @@ jobs:
               ? context.ref.replace('refs/heads/', '')
               : 'main';
 
-            const latestVersion = uniqueVersions.sort(sortVersions)[uniqueVersions.length - 1];
+            const latestVersion = [...uniqueVersions].sort(sortVersions).at(-1);
             core.info(`Latest upstream ARM64 static version: ${latestVersion}`);
 
             core.setOutput('version', latestVersion);

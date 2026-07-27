@@ -29,6 +29,11 @@ jobs:
           url="https://pkgs.tailscale.com/stable/${archive}"
 
           curl -fsSLo "${archive}" "${url}"
+          expected_sha="$(curl -fsSL "${url}.sha256" | awk '{print $1}')"
+          actual_sha="$(sha256sum "${archive}" | awk '{print $1}')"
+          test -n "${expected_sha}"
+          test "${expected_sha}" = "${actual_sha}"
+
           tar -xzf "${archive}"
 
           extracted_dir="tailscale_${VERSION}_arm64"

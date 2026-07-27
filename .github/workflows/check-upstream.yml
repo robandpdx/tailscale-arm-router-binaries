@@ -1,0 +1,83 @@
+name: Check upstream tailscale static ARM64 version
+
+on:
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+
+    steps:
+      - name: Check upstream static version
+        id: check
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const url = 'https://pkgs.tailscale.com/stable/';
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+            }
+
+            const html = await response.text();
+            const versions = [...html.matchAll(/tailscale_(\d+\.\d+\.\d+)_arm64\.tgz/g)].map((match) => match[1]);
+            const uniqueVersions = [...new Set(versions)];
+
+            if (uniqueVersions.length === 0) {
+              throw new Error('No tailscale ARM64 static versions found on upstream page');
+            }
+
+            const sortVersions = (a, b) => {
+              const aParts = a.split('.').map(Number);
+              const bParts = b.split('.').map(Number);
+              for (let i = 0; i < 3; i += 1) {
+                if (aParts[i] !== bParts[i]) {
+                  return aParts[i] - bParts[i];
+                }
+              }
+              return 0;
+            };
+
+            const latestVersion = uniqueVersions.sort(sortVersions)[uniqueVersions.length - 1];
+            core.info(`Latest upstream ARM64 static version: ${latestVersion}`);
+
+            core.setOutput('version', latestVersion);
+
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag: `v${latestVersion}`,
+              });
+              core.info(`Release v${latestVersion} already exists.`);
+              core.setOutput('new_release', 'false');
+            } catch (error) {
+              if (error.status === 404) {
+                core.info(`New version found: ${latestVersion}`);
+                core.setOutput('new_release', 'true');
+              } else {
+                throw error;
+              }
+            }
+
+      - name: Trigger build workflow
+        if: steps.check.outputs.new_release == 'true'
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'build-and-release.yml',
+              ref: context.ref.replace('refs/heads/', ''),
+              inputs: {
+                version: '${{ steps.check.outputs.version }}',
+              },
+            });
+
+            core.info(`Triggered build-and-release.yml for version ${{ steps.check.outputs.version }}`);

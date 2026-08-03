@@ -50,7 +50,7 @@ jobs:
           zip -j "tailscale-arm64-upx-${VERSION}.zip" "${extracted_dir}/tailscale" "${extracted_dir}/tailscaled"
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ inputs.version }}
           name: Tailscale ARM64 UPX v${{ inputs.version }}
